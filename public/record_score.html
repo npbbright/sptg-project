@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Upload Score - SPTG</title>
+
+<link rel="stylesheet" href="/style.css">
+
+</head>
+
+<body class="app-page">
+
+<div class="header">
+    <div class="logo">
+        ✈️ SPTG Rangsit
+    </div>
+
+    <button class="menu-btn" type="button" onclick="toggleSidebar()">
+        ☰ Menu
+    </button>
+
+    <div class="user-info">
+        👤 <span id="username"></span>
+    </div>
+</div>
+
+<div class="container">
+
+    <div class="sidebar">
+
+        <h3>🧭 Navigation</h3>
+
+        <a href="/home">
+            🏠 Home
+        </a>
+
+        <a href="/upload">
+            📄 Upload Files
+        </a>
+
+        <a href="/files">
+            📥 Download Files
+        </a>
+
+        <a href="/record">
+            📝 Record
+        </a>
+
+        <a href="/record-report">
+            📊 Score Report
+        </a>
+
+        <a href="/admin" class="admin-link">
+            🛠 Admin
+        </a>
+
+    </div>
+
+    <div class="sidebar-overlay" onclick="closeSidebar()"></div>
+
+    <div class="content">
+
+        <div class="upload-card">
+
+            <h1>📝 Record Score</h1>
+
+            <div class="section">
+                <h2>🧭 Spatial Orientation</h2>
+                <button class="add-btn" type="button" onclick="addRow(1)">
+                    ➕ Add Testing
+                </button>
+                <div id="testingContainer"></div>
+            </div>
+
+            <div class="section">
+                <h2>🔢 Logical and Numerical Reasoning</h2>
+                <button class="add-btn" type="button" onclick="addRow(2)">
+                    ➕ Add Testing
+                </button>
+                <div id="testingContainer2"></div>
+            </div>
+
+            <div class="section">
+                <h2>🧠 Memory</h2>
+                <button class="add-btn" type="button" onclick="addRow(3)">
+                    ➕ Add Testing
+                </button>
+                <div id="testingContainer3"></div>
+            </div>
+
+            <div class="section">
+                <h2>🔎 Scanning</h2>
+                <button class="add-btn" type="button" onclick="addRow(4)">
+                    ➕ Add Testing
+                </button>
+                <div id="testingContainer4"></div>
+            </div>
+
+            <div class="submit-section">
+                <button class="submit-btn" type="button" onclick="submitScores()">
+                    ✅ Submit Scores
+                </button>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script src="/sidebar.js"></script>
+<script>
+
+
+document.getElementById("username")
+.innerText =
+localStorage.getItem("username") || "Guest";
+
+if (localStorage.getItem("username") === "npbbright") {
+    document
+        .querySelectorAll(".admin-link")
+        .forEach(link => {
+            link.style.display = "block";
+        });
+}
+
+let rowCount = 0;
+
+const testConfigs = {
+
+    1: {
+        skill: "Spatial Orientation",
+        container: "testingContainer",
+        tests: [
+            "Cube Rotation",
+            "Map Reading",
+            "Compass Direction",
+            "Object Orientation"
+        ]
+    },
+
+    2: {
+        skill: "Logical and Numerical Reasoning",
+        container: "testingContainer2",
+        tests: [
+            "Number Series",
+            "Pattern Recognition",
+            "Logical Sequence",
+            "Word Problems"
+        ]
+    },
+
+    3: {
+        skill: "Memory",
+        container: "testingContainer3",
+        tests: [
+            "Short Term Memory",
+            "Visual Memory",
+            "Recall Test",
+            "Digit Span"
+        ]
+    },
+
+    4: {
+        skill: "Scanning",
+        container: "testingContainer4",
+        tests: [
+            "Symbol Search",
+            "Visual Scanning",
+            "Target Detection",
+            "Rapid Identification"
+        ]
+    }
+
+};
+
+function addRow(skillType) {
+
+    rowCount++;
+
+    const config = testConfigs[skillType];
+
+    const options = config.tests
+        .map(test => `<option value="${test}">${test}</option>`)
+        .join('');
+    const today =
+        new Date().toISOString().slice(0, 10);
+
+    const row = document.createElement('div');
+
+    row.className = 'row';
+    row.dataset.skillType = skillType;
+
+    row.innerHTML = `
+    <select
+        name="testName_${rowCount}"
+        onchange="toggleOther(this)">
+        <option value="">Select Test</option>
+        ${options}
+        <option value="Other">Other</option>
+    </select>
+
+    <input
+        type="text"
+        class="other-input"
+        placeholder="Enter Testing Name">
+
+    <input
+        type="date"
+        class="tested-data"
+        value="${today}"
+        required>
+
+    <input
+        type="number"
+        placeholder="Score"
+        min="0">
+
+    <input
+        type="number"
+        placeholder="Attempt"
+        min="0">
+
+    <input
+        type="number"
+        placeholder="Total"
+        min="0">
+
+    <button
+        type="button"
+        class="remove-btn"
+        onclick="this.parentElement.remove()">
+        ✖ Remove
+    </button>
+    `;
+
+    document
+        .getElementById(config.container)
+        .appendChild(row);
+}
+function toggleOther(select) {
+
+    const otherInput =
+        select.parentElement.querySelector('.other-input');
+
+    if (select.value === 'Other') {
+        otherInput.style.display = 'inline-block';
+    } else {
+        otherInput.style.display = 'none';
+        otherInput.value = '';
+    }
+}
+
+async function submitScores() {
+
+    const result = [];
+    const username =
+        localStorage.getItem("username") || "Guest";
+
+    document.querySelectorAll('.row').forEach(row => {
+
+        const select = row.querySelector('select');
+        const otherInput = row.querySelector('.other-input');
+        const testedDataInput = row.querySelector('.tested-data');
+        const numberInputs = row.querySelectorAll('input[type="number"]');
+
+        const testName =
+            select.value === 'Other'
+                ? otherInput.value.trim()
+                : select.value;
+
+        if (!testName) {
+            return;
+        }
+
+        result.push({
+            skill_type: testConfigs[row.dataset.skillType].skill,
+            test_name: testName,
+            tested_data: testedDataInput.value,
+            testing_date: new Date().toISOString(),
+            correct_score: Number(numberInputs[0].value || 0),
+            attempt_score: Number(numberInputs[1].value || 0),
+            total: Number(numberInputs[2].value || 0)
+        });
+
+    });
+
+    if (result.length === 0) {
+        alert("Please add at least one score record.");
+        return;
+    }
+
+    const response = await fetch(
+        "/api/score",
+        {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                username,
+                scores: result
+            })
+        }
+    );
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+        alert(data.message || "Upload score failed");
+        return;
+    }
+
+    alert(`Uploaded ${data.count} score record(s).`);
+}
+
+</script>
+
+</body>
+</html>

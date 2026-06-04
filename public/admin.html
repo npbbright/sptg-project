@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Admin - SPTG</title>
+
+<link rel="stylesheet" href="/style.css">
+
+</head>
+
+<body class="app-page">
+
+<div class="header">
+    <div class="logo">
+        ✈️ SPTG Rangsit
+    </div>
+
+    <button class="menu-btn" type="button" onclick="toggleSidebar()">
+        ☰ Menu
+    </button>
+
+    <div class="user-info">
+        👤 <span id="username"></span>
+    </div>
+</div>
+
+<div class="container">
+
+    <div class="sidebar">
+
+        <h3>🧭 Navigation</h3>
+
+        <a href="/home">
+            🏠 Home
+        </a>
+
+        <a href="/upload">
+            📄 Upload Files
+        </a>
+
+        <a href="/files">
+            📥 Download Files
+        </a>
+
+        <a href="/record">
+            📝 Record
+        </a>
+
+        <a href="/record-report">
+            📊 Score Report
+        </a>
+
+        <a href="/admin">
+            🛠 Admin
+        </a>
+
+    </div>
+
+    <div class="sidebar-overlay" onclick="closeSidebar()"></div>
+
+    <div class="content">
+
+        <div class="admin-card">
+            <div class="admin-header">
+                <h2>📊 Score Data</h2>
+                <button class="danger-btn" type="button" onclick="deleteAllScores()">
+                    🗑 Delete All Scores
+                </button>
+            </div>
+
+            <div class="filter-bar">
+                <div class="filter-field">
+                    <label for="scoreStartDate">Start Date</label>
+                    <input id="scoreStartDate" type="date" required>
+                </div>
+
+                <div class="filter-field">
+                    <label for="scoreEndDate">End Date</label>
+                    <input id="scoreEndDate" type="date" required>
+                </div>
+
+                <div class="filter-field">
+                    <label for="scoreUsername">Username</label>
+                    <input
+                        id="scoreUsername"
+                        type="text"
+                        placeholder="Optional username">
+                </div>
+
+                <button class="search-btn" type="button" onclick="loadScores()">
+                    🔍 Search
+                </button>
+            </div>
+
+            <div id="scoreContainer" class="table-wrap"></div>
+        </div>
+
+        <div class="admin-card">
+            <div class="admin-header">
+                <h2>📄 PDF File Data</h2>
+                <button class="danger-btn" type="button" onclick="deleteAllFiles()">
+                    🗑 Delete All PDF Records
+                </button>
+            </div>
+
+            <div id="fileContainer" class="table-wrap"></div>
+        </div>
+
+    </div>
+
+</div>
+
+<script src="/sidebar.js"></script>
+<script>
+const adminUsername = "npbbright";
+const currentUsername =
+    localStorage.getItem("username") || "";
+
+if (currentUsername !== adminUsername) {
+    alert("Admin access only");
+    window.location.href = "/home";
+}
+
+document.getElementById("username").innerText =
+    currentUsername || "Guest";
+
+function adminHeaders() {
+    return {
+        "x-admin-username": currentUsername
+    };
+}
+
+function escapeHtml(value) {
+    return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+}
+
+function setDefaultScoreDates() {
+    const today =
+        new Date().toISOString().slice(0, 10);
+
+    document.getElementById("scoreStartDate").value =
+        today;
+    document.getElementById("scoreEndDate").value =
+        today;
+}
+
+async function loadScores() {
+    const startDate =
+        document.getElementById("scoreStartDate").value;
+    const endDate =
+        document.getElementById("scoreEndDate").value;
+    const username =
+        document.getElementById("scoreUsername").value.trim();
+    const container =
+        document.getElementById("scoreContainer");
+
+    if (!startDate || !endDate) {
+        container.innerHTML =
+            `<div class="empty">Please select start date and end date</div>`;
+        return;
+    }
+
+    const params = new URLSearchParams({
+        start_date: startDate,
+        end_date: endDate
+    });
+
+    if (username) {
+        params.set("username", username);
+    }
+
+    const response = await fetch(
+        `/api/admin/score?${params.toString()}`,
+        {
+            headers: adminHeaders()
+        }
+    );
+
+    const scores = await response.json();
+
+    if (!response.ok) {
+        container.innerHTML =
+            `<div class="empty">${escapeHtml(scores.message || "Unable to load score data")}</div>`;
+        return;
+    }
+
+    if (!Array.isArray(scores) || scores.length === 0) {
+        container.innerHTML =
+            `<div class="empty">No score data found</div>`;
+        return;
+    }
+
+    container.innerHTML = `
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>User</th>
+                    <th>Skill</th>
+                    <th>Test</th>
+                    <th>Tested Date</th>
+                    <th>Score</th>
+                    <th>Uploaded</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${scores.map(score => `
+                    <tr>
+                        <td>${score.id}</td>
+                        <td>${escapeHtml(score.username)}</td>
+                        <td>${escapeHtml(score.skill_type)}</td>
+                        <td class="score-test">${escapeHtml(score.test_name)}</td>
+                        <td>${escapeHtml(score.tested_data)}</td>
+                        <td>${score.correct_score}/${score.total}</td>
+                        <td>${escapeHtml(score.testing_date)}</td>
+                        <td>
+                            <button
+                                class="delete-btn"
+                                type="button"
+                                onclick="deleteScore(${score.id})">
+                                🗑 Delete
+                            </button>
+                        </td>
+                    </tr>
+                `).join("")}
+            </tbody>
+        </table>
+    `;
+}
+
+async function loadFiles() {
+    const response = await fetch("/api/files");
+    const files = await response.json();
+    const container =
+        document.getElementById("fileContainer");
+
+    if (!Array.isArray(files) || files.length === 0) {
+        container.innerHTML =
+            `<div class="empty">No PDF file data found</div>`;
+        return;
+    }
+
+    container.innerHTML = `
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Filename</th>
+                    <th>Path</th>
+                    <th>Uploaded</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${files.map(file => `
+                    <tr>
+                        <td>${file.id}</td>
+                        <td class="file-name">${escapeHtml(file.filename)}</td>
+                        <td>${escapeHtml(file.filepath)}</td>
+                        <td>${escapeHtml(file.upload_date)}</td>
+                        <td>
+                            <button
+                                class="delete-btn"
+                                type="button"
+                                onclick="deleteFile(${file.id})">
+                                🗑 Delete
+                            </button>
+                        </td>
+                    </tr>
+                `).join("")}
+            </tbody>
+        </table>
+    `;
+}
+
+async function deleteScore(id) {
+    if (!confirm("Delete this score record?")) {
+        return;
+    }
+
+    await fetch(
+        `/api/admin/score/${id}`,
+        {
+            method: "DELETE",
+            headers: adminHeaders()
+        }
+    );
+
+    loadScores();
+}
+
+async function deleteFile(id) {
+    if (!confirm("Delete this PDF database record?")) {
+        return;
+    }
+
+    await fetch(
+        `/api/admin/pdf-files/${id}`,
+        {
+            method: "DELETE",
+            headers: adminHeaders()
+        }
+    );
+
+    loadFiles();
+}
+
+async function deleteAllScores() {
+    if (!confirm("Delete all score data?")) {
+        return;
+    }
+
+    await fetch(
+        "/api/admin/score",
+        {
+            method: "DELETE",
+            headers: adminHeaders()
+        }
+    );
+
+    loadScores();
+}
+
+async function deleteAllFiles() {
+    if (!confirm("Delete all PDF database records?")) {
+        return;
+    }
+
+    await fetch(
+        "/api/admin/pdf-files",
+        {
+            method: "DELETE",
+            headers: adminHeaders()
+        }
+    );
+
+    loadFiles();
+}
+
+setDefaultScoreDates();
+document.getElementById("scoreContainer").innerHTML =
+    `<div class="empty">Select date range, then click Search</div>`;
+loadFiles();
+</script>
+
+</body>
+</html>

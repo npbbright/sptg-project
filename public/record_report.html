@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Score Report - SPTG</title>
+
+<link rel="stylesheet" href="/style.css">
+
+</head>
+
+<body class="app-page">
+
+<div class="header">
+    <div class="logo">
+        ✈️ SPTG Rangsit
+    </div>
+
+    <button class="menu-btn" type="button" onclick="toggleSidebar()">
+        ☰ Menu
+    </button>
+
+    <div class="user-info">
+        👤 <span id="username"></span>
+    </div>
+</div>
+
+<div class="container">
+
+    <div class="sidebar">
+
+        <h3>🧭 Navigation</h3>
+
+        <a href="/home">
+            🏠 Home
+        </a>
+
+        <a href="/upload">
+            📄 Upload Files
+        </a>
+
+        <a href="/files">
+            📥 Download Files
+        </a>
+
+        <a href="/record">
+            📝 Record
+        </a>
+
+        <a href="/record-report">
+            📊 Score Report
+        </a>
+
+        <a href="/admin" class="admin-link">
+            🛠 Admin
+        </a>
+
+    </div>
+
+    <div class="sidebar-overlay" onclick="closeSidebar()"></div>
+
+    <div class="content">
+
+        <div class="report-card">
+            <h2 class="page-title">
+                📊 Score Performance Report
+            </h2>
+
+            <p class="subtitle">
+                Review tested score totals by date, skill, and test name.
+            </p>
+
+            <div class="filter-bar">
+                <div class="filter-field">
+                    <label for="fromDate">From Date</label>
+                    <input id="fromDate" type="date">
+                </div>
+
+                <div class="filter-field">
+                    <label for="toDate">To Date</label>
+                    <input id="toDate" type="date">
+                </div>
+
+                <button class="filter-btn" type="button" onclick="loadReport()">
+                    🔍 Search
+                </button>
+            </div>
+
+            <div class="graph-card">
+                <div class="graph-title">
+                    📈 Score by Tested Date
+                </div>
+
+                <div class="graph-subtitle">
+                    Clustered columns compare total correct score across skill types.
+                </div>
+
+                <div id="graphEmpty" class="graph-empty">
+                    No graph data found for this date range
+                </div>
+
+                <div class="graph-wrap">
+                    <canvas id="scoreGraph"></canvas>
+                </div>
+            </div>
+
+            <div class="summary-grid">
+                <div class="summary-item">
+                    <div class="summary-label">Groups</div>
+                    <div id="skillCount" class="summary-value">0</div>
+                </div>
+
+                <div class="summary-item">
+                    <div class="summary-label">Correct Score</div>
+                    <div id="correctTotal" class="summary-value">0</div>
+                </div>
+
+                <div class="summary-item">
+                    <div class="summary-label">Attempt Score</div>
+                    <div id="attemptTotal" class="summary-value">0</div>
+                </div>
+
+                <div class="summary-item">
+                    <div class="summary-label">Possible Score</div>
+                    <div id="scoreTotal" class="summary-value">0</div>
+                </div>
+
+                <div class="summary-item">
+                    <div class="summary-label">Accuracy</div>
+                    <div id="accuracyPercent" class="summary-value">0%</div>
+                </div>
+
+                <div class="summary-item">
+                    <div class="summary-label">Correction Rate</div>
+                    <div id="correctionRate" class="summary-value">0%</div>
+                </div>
+            </div>
+
+            <div class="table-title">
+                📋 Score Summary by Skill and Test
+            </div>
+
+            <div id="reportContainer" class="table-wrap"></div>
+        </div>
+
+    </div>
+
+</div>
+
+<script src="/sidebar.js"></script>
+<script>
+const username =
+    localStorage.getItem("username") || "Guest";
+
+document.getElementById("username").innerText =
+    username;
+
+if (username === "npbbright") {
+    document
+        .querySelectorAll(".admin-link")
+        .forEach(link => {
+            link.style.display = "block";
+        });
+}
+
+function numberValue(value) {
+    return Number(value || 0);
+}
+
+function percentValue(numerator, denominator) {
+    if (!denominator) {
+        return "0%";
+    }
+
+    return `${((numerator * 100) / denominator).toFixed(2)}%`;
+}
+
+function buildReportParams() {
+    const fromDate =
+        document.getElementById("fromDate").value;
+    const toDate =
+        document.getElementById("toDate").value;
+
+    const params = new URLSearchParams();
+
+    if (fromDate) {
+        params.set("from", fromDate);
+    }
+
+    if (toDate) {
+        params.set("to", toDate);
+    }
+
+    return params;
+}
+
+function drawScoreGraph(rows) {
+    const canvas =
+        document.getElementById("scoreGraph");
+    const empty =
+        document.getElementById("graphEmpty");
+    const wrapper =
+        canvas.parentElement;
+    const context =
+        canvas.getContext("2d");
+    const width =
+        wrapper.clientWidth;
+    const height =
+        wrapper.clientHeight;
+    const pixelRatio =
+        window.devicePixelRatio || 1;
+
+    canvas.width =
+        Math.floor(width * pixelRatio);
+    canvas.height =
+        Math.floor(height * pixelRatio);
+    context.setTransform(pixelRatio, 0, 0, pixelRatio, 0, 0);
+    context.clearRect(0, 0, width, height);
+
+    if (!Array.isArray(rows) || rows.length === 0) {
+        empty.style.display = "block";
+        return;
+    }
+
+    empty.style.display = "none";
+
+    const dates =
+        [...new Set(rows.map(row => row.tested_date))];
+    const skills =
+        [...new Set(rows.map(row => row.skill_type))];
+    const maxScore =
+        Math.max(...rows.map(row => numberValue(row.score)), 1);
+    const padding = {
+        top: 24,
+        right: 24,
+        bottom: 58,
+        left: 58
+    };
+    const chartWidth =
+        width - padding.left - padding.right;
+    const chartHeight =
+        height - padding.top - padding.bottom;
+    const colors = [
+        "#7c3aed",
+        "#0891b2",
+        "#16a34a",
+        "#dc2626",
+        "#ea580c",
+        "#2563eb"
+    ];
+
+    function xPosition(date) {
+        const slotWidth =
+            chartWidth / dates.length;
+
+        return padding.left +
+            (dates.indexOf(date) * slotWidth) +
+            slotWidth / 2;
+    }
+
+    function yPosition(score) {
+        return padding.top +
+            chartHeight -
+            (numberValue(score) / maxScore) * chartHeight;
+    }
+
+    context.strokeStyle = "#ddd6fe";
+    context.lineWidth = 1;
+    context.beginPath();
+    context.moveTo(padding.left, padding.top);
+    context.lineTo(padding.left, padding.top + chartHeight);
+    context.lineTo(padding.left + chartWidth, padding.top + chartHeight);
+    context.stroke();
+
+    for (let step = 0; step <= 4; step++) {
+        const value =
+            Math.round((maxScore / 4) * step);
+        const y =
+            yPosition(value);
+
+        context.strokeStyle = "#ede9fe";
+        context.beginPath();
+        context.moveTo(padding.left, y);
+        context.lineTo(padding.left + chartWidth, y);
+        context.stroke();
+
+        context.fillStyle = "#6b7280";
+        context.font = "12px Arial";
+        context.textAlign = "right";
+        context.fillText(value, padding.left - 10, y + 4);
+    }
+
+    dates.forEach((date) => {
+        const x =
+            xPosition(date);
+
+        context.fillStyle = "#6b7280";
+        context.font = "12px Arial";
+        context.textAlign = "center";
+        context.fillText(date, x, height - 22);
+    });
+
+    const groupWidth =
+        chartWidth / dates.length;
+    const barGap = 6;
+    const barWidth =
+        Math.max(
+            4,
+            Math.min(
+                28,
+                (groupWidth - barGap * (skills.length + 1)) / skills.length
+            )
+        );
+
+    skills.forEach((skill, skillIndex) => {
+        const color =
+            colors[skillIndex % colors.length];
+        const skillRows =
+            rows.filter(row => row.skill_type === skill);
+        const scoreByDate =
+            new Map(skillRows.map(row => [row.tested_date, row.score]));
+
+        dates.forEach((date) => {
+            const centerX =
+                xPosition(date);
+            const groupStartX =
+                centerX - ((barWidth * skills.length) + (barGap * (skills.length - 1))) / 2;
+            const x =
+                groupStartX + skillIndex * (barWidth + barGap);
+            const score =
+                numberValue(scoreByDate.get(date));
+            const y =
+                yPosition(score);
+            const barHeight =
+                padding.top + chartHeight - y;
+
+            context.fillStyle = color;
+            context.fillRect(x, y, barWidth, barHeight);
+        });
+
+        const legendX =
+            padding.left + skillIndex * 170;
+        const legendY =
+            14;
+
+        context.fillStyle = color;
+        context.fillRect(legendX, legendY - 8, 12, 12);
+        context.fillStyle = "#4c1d95";
+        context.font = "12px Arial";
+        context.textAlign = "left";
+        context.fillText(skill, legendX + 18, legendY + 2);
+    });
+}
+
+async function loadGraph(params) {
+    const response = await fetch(
+        `/api/score-report-graph?${params.toString()}`
+    );
+    const rows = await response.json();
+
+    drawScoreGraph(rows);
+}
+
+function setSummary(rows) {
+    const correctTotal =
+        rows.reduce((sum, row) => sum + numberValue(row.correct_score), 0);
+    const attemptTotal =
+        rows.reduce((sum, row) => sum + numberValue(row.attempt_score), 0);
+    const scoreTotal =
+        rows.reduce((sum, row) => sum + numberValue(row.total), 0);
+
+    document.getElementById("skillCount").innerText =
+        rows.length;
+    document.getElementById("correctTotal").innerText =
+        correctTotal;
+    document.getElementById("attemptTotal").innerText =
+        attemptTotal;
+    document.getElementById("scoreTotal").innerText =
+        scoreTotal;
+    document.getElementById("accuracyPercent").innerText =
+        percentValue(correctTotal, attemptTotal);
+    document.getElementById("correctionRate").innerText =
+        percentValue(correctTotal, scoreTotal);
+}
+
+async function loadReport() {
+    const params =
+        buildReportParams();
+
+    const response = await fetch(
+        `/api/score-report?${params.toString()}`
+    );
+    const rows = await response.json();
+    const container =
+        document.getElementById("reportContainer");
+
+    if (!Array.isArray(rows) || rows.length === 0) {
+        setSummary([]);
+        await loadGraph(params);
+        container.innerHTML =
+            `<div class="empty">No score data found for this date range</div>`;
+        return;
+    }
+
+    await loadGraph(params);
+    setSummary(rows);
+
+    container.innerHTML = `
+        <table>
+            <thead>
+                <tr>
+                    <th>Skill Type</th>
+                    <th>Test Name</th>
+                    <th>Records</th>
+                    <th>Correct</th>
+                    <th>Attempt</th>
+                    <th>Possible</th>
+                    <th>Accuracy</th>
+                    <th>Correction Rate</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${rows.map(row => `
+                    <tr>
+                        <td class="skill-name">${row.skill_type}</td>
+                        <td class="test-name">${row.test_name}</td>
+                        <td>${numberValue(row.record_count)}</td>
+                        <td class="metric-text">${numberValue(row.correct_score)}</td>
+                        <td class="metric-text">${numberValue(row.attempt_score)}</td>
+                        <td class="metric-text">${numberValue(row.total)}</td>
+                        <td class="metric-text">${numberValue(row.accuracy_percent).toFixed(2)}%</td>
+                        <td class="metric-text">${numberValue(row.correction_rate_percent).toFixed(2)}%</td>
+                    </tr>
+                `).join("")}
+            </tbody>
+        </table>
+    `;
+}
+
+loadReport();
+</script>
+
+</body>
+</html>

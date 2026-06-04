@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Document Library - SPTG</title>
+
+<link rel="stylesheet" href="/style.css">
+
+
+</head>
+
+<body class="app-page">
+
+<div class="header">
+
+    <div class="logo">
+        ✈️ SPTG Rangsit
+    </div>
+
+    <button class="menu-btn" type="button" onclick="toggleSidebar()">
+        ☰ Menu
+    </button>
+
+    <div class="user-info">
+        👤 <span id="username">admin</span>
+    </div>
+
+</div>
+
+<div class="container">
+
+    <div class="sidebar">
+
+        <h3>🧭 Navigation</h3>
+
+        <a href="/home">
+            🏠 Home
+        </a>
+
+        <a href="/upload">
+            📄 Upload Files
+        </a>
+
+        <a href="/files">
+            📥 Download Files
+        </a>
+
+        <a href="/record">
+            📝 Record
+        </a>
+
+        <a href="/record-report">
+            📊 Score Report
+        </a>
+
+        <a href="/admin" class="admin-link">
+            🛠 Admin
+        </a>
+
+    </div>
+
+    <div class="sidebar-overlay" onclick="closeSidebar()"></div>
+
+    <div class="content">
+
+        <div class="library-card">
+
+            <h2 class="page-title">
+                📚 Document Library
+            </h2>
+
+            <p class="subtitle">
+                Browse, preview and download uploaded PDF documents
+            </p>
+
+            <div
+                id="fileContainer"
+                class="file-grid">
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script src="/sidebar.js"></script>
+<script>
+
+document.getElementById("username")
+.innerText =
+localStorage.getItem("username") || "Guest";
+
+if (localStorage.getItem("username") === "npbbright") {
+    document
+        .querySelectorAll(".admin-link")
+        .forEach(link => {
+            link.style.display = "block";
+        });
+}
+
+async function loadFiles(){
+
+    const response =
+        await fetch("/api/files");
+
+    const files =
+        await response.json();
+
+    const container =
+        document.getElementById(
+            "fileContainer"
+        );
+
+    if(files.length === 0){
+
+        container.innerHTML = `
+            <div class="empty">
+                📂 No PDF files uploaded yet
+            </div>
+        `;
+
+        return;
+    }
+
+    container.innerHTML =
+        files.map(file => `
+
+        <div class="file-card">
+
+            <div class="file-icon">
+                📄
+            </div>
+
+            <div class="file-name">
+                ${file.filename}
+            </div>
+
+            <div class="file-id">
+                Document #${file.id}
+            </div>
+
+            <div class="action-group">
+
+                <a
+                    class="btn btn-preview"
+                    href="/uploads/${file.filepath}"
+                    target="_blank">
+
+                    👁 Preview
+
+                </a>
+
+                <a
+                    class="btn btn-download"
+                    href="/uploads/${file.filepath}"
+                    download>
+
+                    ⬇ Download
+
+                </a>
+
+            </div>
+
+        </div>
+
+        `).join("");
+}
+
+loadFiles();
+
+</script>
+
+</body>
+</html>

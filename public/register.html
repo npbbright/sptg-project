@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Create Account - SPTG</title>
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body class="auth-page">
+
+<div class="page">
+
+    <div class="login-card">
+
+        <div class="logo">✈️</div>
+
+        <h1>✨ Create Account</h1>
+
+        <p class="subtitle">
+            🧾 Register for SPTG Rangsit
+        </p>
+
+        <form id="registerForm">
+
+            <input
+                type="text"
+                id="username"
+                placeholder="Username"
+                required
+            >
+
+            <input
+                type="password"
+                id="password"
+                placeholder="Password"
+                required
+            >
+
+            <button type="submit">
+                ✅ Register
+            </button>
+
+        </form>
+
+        <div class="divider">
+            👋 Already have an account?
+        </div>
+
+        <a href="/" class="register-btn">
+            🔐 Back to Login
+        </a>
+
+    </div>
+
+</div>
+<script>
+document
+  .getElementById("registerForm")
+  .addEventListener("submit", async (e) => {
+
+    e.preventDefault();
+
+    const username =
+      document.getElementById("username").value;
+
+    const password =
+      document.getElementById("password").value;
+
+    try {
+
+      const response = await fetch(
+        "/api/register",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            username,
+            password
+          })
+        }
+      );
+
+      const result = await response.json();
+
+      if (result.success) {
+
+        alert("Register successful!");
+
+        setTimeout(() => {
+          window.location.href = "/";
+        }, 500);
+
+      } else {
+
+        alert(
+          result.message ||
+          "Registration failed"
+        );
+
+      }
+
+    } catch (error) {
+
+      alert(
+        "Unable to connect to server"
+      );
+
+      console.error(error);
+
+    }
+
+});
+</script>
+</body>
+
+</html>

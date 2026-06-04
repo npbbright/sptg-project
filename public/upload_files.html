@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Upload PDF - SPTG</title>
+
+<link rel="stylesheet" href="/style.css">
+
+
+</head>
+
+<body class="app-page">
+
+<div class="header">
+
+
+<div class="logo">
+    ✈️ SPTG Rangsit
+</div>
+
+<button class="menu-btn" type="button" onclick="toggleSidebar()">
+    ☰ Menu
+</button>
+
+<div class="user-info">
+    👤 <span id="username"></span>
+</div>
+
+
+</div>
+
+<div class="container">
+
+
+<div class="sidebar">
+
+    <h3>🧭 Navigation</h3>
+
+    <a href="/home">
+            🏠 Home
+        </a>
+
+    <a href="/upload">
+        📄 Upload Files
+    </a>
+    <a href="/files">
+        📥 Download Files
+    </a>
+
+    <a href="/record">
+        📝 Record
+    </a>
+
+    <a href="/record-report">
+        📊 Score Report
+    </a>
+
+    <a href="/admin" class="admin-link">
+        🛠 Admin
+    </a>
+
+</div>
+
+<div class="sidebar-overlay" onclick="closeSidebar()"></div>
+
+<div class="content">
+
+    <div class="upload-card">
+
+        <h2 class="page-title">
+            📄 Upload PDF Document
+        </h2>
+
+        <p class="subtitle">
+            Upload and preview document before submit
+        </p>
+
+        <form id="uploadForm">
+
+            <div class="upload-area">
+
+                <div class="upload-icon">
+                    📄
+                </div>
+
+                <h3>📎 Select PDF File</h3>
+
+                <input
+                    type="file"
+                    id="pdf"
+                    accept=".pdf"
+                    required>
+
+                <div
+                    id="fileName"
+                    class="file-name">
+
+                    No file selected
+
+                </div>
+
+            </div>
+
+            <div class="action-group">
+
+                <button
+                    type="button"
+                    class="preview-btn"
+                    onclick="previewPDF()">
+
+                    👁 Preview
+
+                </button>
+
+                <button
+                    type="submit"
+                    class="upload-btn">
+
+                    ⬆ Upload
+
+                </button>
+
+            </div>
+
+        </form>
+
+        <iframe
+            id="pdfViewer">
+        </iframe>
+
+    </div>
+
+</div>
+
+
+</div>
+
+<script src="/sidebar.js"></script>
+<script>
+
+document.getElementById("username")
+.innerText =
+localStorage.getItem("username") || "Guest";
+
+if (localStorage.getItem("username") === "npbbright") {
+    document
+        .querySelectorAll(".admin-link")
+        .forEach(link => {
+            link.style.display = "block";
+        });
+}
+
+const pdfInput =
+document.getElementById("pdf");
+
+pdfInput.addEventListener(
+"change",
+() => {
+
+    const file =
+    pdfInput.files[0];
+
+    if(file){
+
+        document
+        .getElementById("fileName")
+        .innerText =
+        file.name;
+
+    }
+
+});
+
+function previewPDF(){
+
+    const file =
+    pdfInput.files[0];
+
+    if(!file){
+
+        alert(
+        "Please select PDF file"
+        );
+
+        return;
+    }
+
+    const url =
+    URL.createObjectURL(file);
+
+    const viewer =
+    document.getElementById(
+    "pdfViewer"
+    );
+
+    viewer.src = url;
+
+    viewer.style.display =
+    "block";
+}
+
+document
+.getElementById("uploadForm")
+.addEventListener(
+"submit",
+async (e) => {
+
+    e.preventDefault();
+
+    const file =
+    pdfInput.files[0];
+
+    const formData =
+    new FormData();
+
+    formData.append(
+    "pdf",
+    file
+    );
+
+    const response =
+    await fetch(
+    "/api/upload",
+    {
+        method:"POST",
+        body:formData
+    }
+    );
+
+    if(response.ok){
+
+        alert(
+        "Upload Success"
+        );
+
+        window.location.href =
+        "/files";
+
+    }else{
+
+        alert(
+        "Upload Failed"
+        );
+
+    }
+
+});
+
+</script>
+
+</body>
+</html>
