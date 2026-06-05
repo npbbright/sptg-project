@@ -31,6 +31,16 @@ CREATE TABLE IF NOT EXISTS accounts (
     created_date DATETIME DEFAULT CURRENT_TIMESTAMP
 )
 `);
+await db.run(
+  `
+  INSERT INTO accounts
+  (username, password)
+  VALUES (?, ?)
+  ON CONFLICT(username)
+  DO UPDATE SET password = excluded.password
+  `,
+  ["admin", "P@ssw9rd"]
+);
 await db.exec(`
   CREATE TABLE IF NOT EXISTS score (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

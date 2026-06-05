@@ -52,6 +52,10 @@
             📊 Score Report
         </a>
 
+        <a href="/leaderboard">
+            🏆 Leaderboard
+        </a>
+
         <a href="/admin" class="admin-link">
             🛠 Admin
         </a>
@@ -118,7 +122,7 @@ document.getElementById("username")
 .innerText =
 localStorage.getItem("username") || "Guest";
 
-if (localStorage.getItem("username") === "npbbright") {
+if (localStorage.getItem("username") === "admin") {
     document
         .querySelectorAll(".admin-link")
         .forEach(link => {
@@ -135,9 +139,9 @@ const testConfigs = {
         container: "testingContainer",
         tests: [
             "Cube Rotation",
-            "Map Reading",
-            "Compass Direction",
-            "Object Orientation"
+            "Cube Assembly",
+            "Box Folding",
+            "Box Unfolding"
         ]
     },
 
@@ -145,10 +149,12 @@ const testConfigs = {
         skill: "Logical and Numerical Reasoning",
         container: "testingContainer2",
         tests: [
-            "Number Series",
-            "Pattern Recognition",
-            "Logical Sequence",
-            "Word Problems"
+            "Series Number",
+            "Series Number 3x3",
+            "Series Pictures",
+            "Aproxination Calculation",
+            "Aircraft Rotation",
+            "Logic Gates"
         ]
     },
 
@@ -156,10 +162,8 @@ const testConfigs = {
         skill: "Memory",
         container: "testingContainer3",
         tests: [
-            "Short Term Memory",
-            "Visual Memory",
-            "Recall Test",
-            "Digit Span"
+            "Short Term Memory - Passage",
+            "Short Term Memory - Table"
         ]
     },
 
@@ -167,10 +171,11 @@ const testConfigs = {
         skill: "Scanning",
         container: "testingContainer4",
         tests: [
-            "Symbol Search",
-            "Visual Scanning",
-            "Target Detection",
-            "Rapid Identification"
+            "Errors Identification",
+            "Hidden Images",
+            "Lines Following",
+            "Images Compare",
+            "Scaning Shapes"
         ]
     }
 
@@ -314,6 +319,7 @@ async function submitScores() {
     }
 
     alert(`Uploaded ${data.count} score record(s).`);
+    window.location.reload();
 }
 
 </script>

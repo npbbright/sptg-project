@@ -150,7 +150,25 @@ button{
 }
 
 .user-info{
+    display:flex;
+    align-items:center;
+    gap:10px;
     font-size:16px;
+}
+
+.logout-btn{
+    background:rgba(255,255,255,.18);
+    color:white;
+    border:1px solid rgba(255,255,255,.35);
+    border-radius:999px;
+    padding:7px 12px;
+    font-size:13px;
+    font-weight:700;
+}
+
+.logout-btn:hover{
+    background:rgba(255,255,255,.28);
+    transform:translateY(-1px);
 }
 
 .menu-btn{
@@ -496,6 +514,10 @@ button{
     border-radius:12px;
 }
 
+.report-results{
+    display:none;
+}
+
 .graph-card{
     padding:18px;
     margin-bottom:25px;
@@ -609,6 +631,18 @@ td{
     margin:4px 0 14px;
 }
 
+.table-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:16px;
+    margin-bottom:14px;
+}
+
+.table-header .table-title{
+    margin:0;
+}
+
 .skill-name,
 .test-name,
 .file-name,
@@ -620,6 +654,58 @@ td{
 .metric-text{
     color:#4c1d95;
     font-weight:800;
+}
+
+.your-rank-title{
+    margin-top:28px;
+}
+
+.rank-cell{
+    color:#4c1d95;
+    font-size:18px;
+    font-weight:900;
+}
+
+.current-rank-row{
+    background:#faf5ff;
+}
+
+.current-rank-row td{
+    border-bottom-color:#ddd6fe;
+}
+
+.edit-actions{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    margin:0 0 16px;
+}
+
+.edit-message{
+    min-height:22px;
+    margin-bottom:12px;
+    color:#6b7280;
+    font-weight:700;
+}
+
+.edit-message.success{
+    color:#16a34a;
+}
+
+.edit-message.error{
+    color:#dc2626;
+}
+
+.edit-table input{
+    min-width:140px;
+    margin:0;
+    padding:9px 10px;
+    border-radius:9px;
+    font-size:13px;
+}
+
+.edit-table input[type="number"]{
+    min-width:95px;
 }
 
 .empty{
@@ -652,7 +738,7 @@ td{
 
     .user-info{
         font-size:14px;
-        width:100%;
+        justify-content:flex-end;
     }
 
     .container{

@@ -36,7 +36,9 @@ const pageRoutes = [
   { route: "/upload", file: "upload_files.html" },
   { route: "/files", file: "downlod_files.html" },
   { route: "/record", file: "record_score.html" },
+  { route: "/edit_record", file: "edit_record.html" },
   { route: "/record-report", file: "record_report.html" },
+  { route: "/leaderboard", file: "leaderboard.html" },
   { route: "/register", file: "register.html" },
   { route: "/show", file: "show.html" },
   { route: "/layout", file: "layout.html" }
@@ -186,7 +188,7 @@ app.use("/uploads", express.static(uploadDir));
 let db: Awaited<ReturnType<typeof initDB>>;
 
 function isAdminRequest(req: express.Request) {
-  return getSession(req)?.username === "npbbright";
+  return getSession(req)?.username === "admin";
 }
 
 function requireAdmin(
@@ -204,6 +206,23 @@ function requireAdmin(
   return true;
 }
 
+function requireSession(
+  req: express.Request,
+  res: express.Response
+) {
+  const session = getSession(req);
+
+  if (!session) {
+    res.status(401).json({
+      success: false,
+      message: "Session expired. Please login again."
+    });
+    return null;
+  }
+
+  return session;
+}
+
 app.use("/api", (req, res, next) => {
   const publicApiPaths = [
     "/login",
@@ -216,11 +235,7 @@ app.use("/api", (req, res, next) => {
     return;
   }
 
-  if (!getSession(req)) {
-    res.status(401).json({
-      success: false,
-      message: "Session expired. Please login again."
-    });
+  if (!requireSession(req, res)) {
     return;
   }
 
@@ -275,9 +290,15 @@ app.get("/api/files", async (_, res) => {
 });
 
 app.get("/api/score-report", async (req, res) => {
+  const session = requireSession(req, res);
+
+  if (!session) {
+    return;
+  }
+
   const { from, to } = req.query;
-  const filters: string[] = [];
-  const params: string[] = [];
+  const filters = ["username = ?"];
+  const params = [session.username];
 
   if (typeof from === "string" && from) {
     filters.push("date(tested_data) >= date(?)");
@@ -325,9 +346,18 @@ app.get("/api/score-report", async (req, res) => {
 });
 
 app.get("/api/score-report-graph", async (req, res) => {
+  const session = requireSession(req, res);
+
+  if (!session) {
+    return;
+  }
+
   const { from, to } = req.query;
-  const filters = ["tested_data IS NOT NULL"];
-  const params: string[] = [];
+  const filters = [
+    "tested_data IS NOT NULL",
+    "username = ?"
+  ];
+  const params = [session.username];
 
   if (typeof from === "string" && from) {
     filters.push("date(tested_data) >= date(?)");
@@ -354,6 +384,78 @@ app.get("/api/score-report-graph", async (req, res) => {
   );
 
   res.json(graphRows);
+});
+
+app.get("/api/leaderboard", async (req, res) => {
+  const session = requireSession(req, res);
+
+  if (!session) {
+    return;
+  }
+
+  const users = await db.all(
+    `
+    SELECT
+      username,
+      COUNT(*) AS record_count,
+      ROUND(
+        AVG(
+          CASE
+            WHEN total > 0
+            THEN (correct_score * 100.0) / total
+            ELSE 0
+          END
+        ),
+        2
+      ) AS correction_rate_percent,
+      ROUND(
+        AVG(
+          CASE
+            WHEN attempt_score > 0
+            THEN (correct_score * 100.0) / attempt_score
+            ELSE 0
+          END
+        ),
+        2
+      ) AS accuracy_percent,
+      SUM(correct_score) AS correct_score,
+      SUM(attempt_score) AS attempt_score,
+      SUM(total) AS total
+    FROM score
+    GROUP BY username
+    `
+  );
+
+  const rankedUsers = users
+    .map((user) => ({
+      ...user,
+      correction_rate_percent: Number(user.correction_rate_percent || 0),
+      accuracy_percent: Number(user.accuracy_percent || 0),
+      correct_score: Number(user.correct_score || 0),
+      attempt_score: Number(user.attempt_score || 0),
+      total: Number(user.total || 0),
+      record_count: Number(user.record_count || 0)
+    }))
+    .sort((left, right) =>
+      right.correction_rate_percent - left.correction_rate_percent ||
+      right.accuracy_percent - left.accuracy_percent ||
+      right.correct_score - left.correct_score ||
+      left.username.localeCompare(right.username)
+    )
+    .map((user, index) => ({
+      ...user,
+      rank: index + 1,
+      is_current_user: user.username === session.username
+    }));
+
+  const currentUser =
+    rankedUsers.find((user) => user.username === session.username) || null;
+
+  res.json({
+    top10: rankedUsers.slice(0, 10),
+    currentUser,
+    totalUsers: rankedUsers.length
+  });
 });
 
 app.get("/api/admin/score", async (req, res) => {
@@ -398,6 +500,125 @@ app.get("/api/admin/score", async (req, res) => {
   );
 
   res.json(scores);
+});
+
+app.get("/api/edit-record", async (req, res) => {
+  const session = requireSession(req, res);
+
+  if (!session) {
+    return;
+  }
+
+  const { start_date, started_date, end_date } = req.query;
+  const effectiveStartDate =
+    typeof start_date === "string"
+      ? start_date
+      : started_date;
+
+  if (
+    typeof effectiveStartDate !== "string" ||
+    !effectiveStartDate ||
+    typeof end_date !== "string" ||
+    !end_date
+  ) {
+    res.status(400).json({
+      success: false,
+      message: "start_date and end_date are required"
+    });
+    return;
+  }
+
+  const scores = await db.all(
+    `
+    SELECT *
+    FROM score
+    WHERE username = ?
+    AND date(tested_data) >= date(?)
+    AND date(tested_data) <= date(?)
+    ORDER BY tested_data DESC, id DESC
+    `,
+    [session.username, effectiveStartDate, end_date]
+  );
+
+  res.json(scores);
+});
+
+app.put("/api/edit-record", async (req, res) => {
+  const session = requireSession(req, res);
+
+  if (!session) {
+    return;
+  }
+
+  const { rows } = req.body;
+
+  if (!Array.isArray(rows) || rows.length === 0) {
+    res.status(400).json({
+      success: false,
+      message: "rows are required"
+    });
+    return;
+  }
+
+  await db.exec("BEGIN");
+
+  try {
+    const updateSql = `
+      UPDATE score
+      SET
+        tested_data = ?,
+        correct_score = ?,
+        attempt_score = ?,
+        total = ?
+      WHERE id = ?
+      AND username = ?
+    `;
+
+    let updated = 0;
+
+    for (const row of rows) {
+      if (!row || typeof row !== "object") {
+        throw new Error("Each row must be an object");
+      }
+
+      const id = Number(row.id);
+
+      if (!Number.isInteger(id) || id <= 0) {
+        throw new Error("Every row must include a valid id");
+      }
+
+      const params = [
+        row.tested_data || null,
+        Number(row.correct_score || 0),
+        Number(row.attempt_score || 0),
+        row.total === "" || row.total === null || row.total === undefined
+          ? null
+          : Number(row.total),
+        id
+      ];
+
+      params.push(session.username);
+
+      const result = await db.run(updateSql, params);
+      updated += result.changes || 0;
+    }
+
+    await db.exec("COMMIT");
+
+    res.json({
+      success: true,
+      updated
+    });
+  } catch (error) {
+    await db.exec("ROLLBACK");
+
+    res.status(400).json({
+      success: false,
+      message: error instanceof Error
+        ? error.message
+        : String(error)
+    });
+  }
 });
 
 app.delete("/api/admin/score", async (req, res) => {
@@ -538,9 +759,15 @@ app.post('/api/score', async (req, res) => {
 
     try {
 
-        const { username, scores } = req.body;
+        const session = requireSession(req, res);
 
-        if (!username || !Array.isArray(scores)) {
+        if (!session) {
+            return;
+        }
+
+        const { scores } = req.body;
+
+        if (!Array.isArray(scores)) {
             return res.status(400).json({
                 success: false,
                 message: 'Invalid request'
@@ -564,7 +791,7 @@ app.post('/api/score', async (req, res) => {
         for (const item of scores) {
 
             await stmt.run(
-                username,
+                session.username,
                 item.skill_type || item.skillName,
                 item.test_name || item.testName,
                 item.tested_data || null,

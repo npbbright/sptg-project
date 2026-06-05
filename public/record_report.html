@@ -52,6 +52,10 @@
             📊 Score Report
         </a>
 
+        <a href="/leaderboard">
+            🏆 Leaderboard
+        </a>
+
         <a href="/admin" class="admin-link">
             🛠 Admin
         </a>
@@ -87,61 +91,72 @@
                 </button>
             </div>
 
-            <div class="graph-card">
-                <div class="graph-title">
-                    📈 Score by Tested Date
+            <div id="reportResults" class="report-results">
+                <div class="graph-card">
+                    <div class="graph-title">
+                        📈 Score by Tested Date
+                    </div>
+
+                    <div class="graph-subtitle">
+                        Clustered columns compare total correct score across skill types.
+                    </div>
+
+                    <div id="graphEmpty" class="graph-empty">
+                        No graph data found for this date range
+                    </div>
+
+                    <div class="graph-wrap">
+                        <canvas id="scoreGraph"></canvas>
+                    </div>
                 </div>
 
-                <div class="graph-subtitle">
-                    Clustered columns compare total correct score across skill types.
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <div class="summary-label">Groups</div>
+                        <div id="skillCount" class="summary-value">0</div>
+                    </div>
+
+                    <div class="summary-item">
+                        <div class="summary-label">Correct Score</div>
+                        <div id="correctTotal" class="summary-value">0</div>
+                    </div>
+
+                    <div class="summary-item">
+                        <div class="summary-label">Attempt Score</div>
+                        <div id="attemptTotal" class="summary-value">0</div>
+                    </div>
+
+                    <div class="summary-item">
+                        <div class="summary-label">Possible Score</div>
+                        <div id="scoreTotal" class="summary-value">0</div>
+                    </div>
+
+                    <div class="summary-item">
+                        <div class="summary-label">Accuracy</div>
+                        <div id="accuracyPercent" class="summary-value">0%</div>
+                    </div>
+
+                    <div class="summary-item">
+                        <div class="summary-label">Correction Rate</div>
+                        <div id="correctionRate" class="summary-value">0%</div>
+                    </div>
                 </div>
 
-                <div id="graphEmpty" class="graph-empty">
-                    No graph data found for this date range
+                <div class="table-header">
+                    <div class="table-title">
+                        📋 Score Summary by Skill and Test
+                    </div>
+
+                    <button
+                        class="filter-btn"
+                        type="button"
+                        onclick="window.location.href='/edit_record'">
+                        ✏️ Edit
+                    </button>
                 </div>
 
-                <div class="graph-wrap">
-                    <canvas id="scoreGraph"></canvas>
-                </div>
+                <div id="reportContainer" class="table-wrap"></div>
             </div>
-
-            <div class="summary-grid">
-                <div class="summary-item">
-                    <div class="summary-label">Groups</div>
-                    <div id="skillCount" class="summary-value">0</div>
-                </div>
-
-                <div class="summary-item">
-                    <div class="summary-label">Correct Score</div>
-                    <div id="correctTotal" class="summary-value">0</div>
-                </div>
-
-                <div class="summary-item">
-                    <div class="summary-label">Attempt Score</div>
-                    <div id="attemptTotal" class="summary-value">0</div>
-                </div>
-
-                <div class="summary-item">
-                    <div class="summary-label">Possible Score</div>
-                    <div id="scoreTotal" class="summary-value">0</div>
-                </div>
-
-                <div class="summary-item">
-                    <div class="summary-label">Accuracy</div>
-                    <div id="accuracyPercent" class="summary-value">0%</div>
-                </div>
-
-                <div class="summary-item">
-                    <div class="summary-label">Correction Rate</div>
-                    <div id="correctionRate" class="summary-value">0%</div>
-                </div>
-            </div>
-
-            <div class="table-title">
-                📋 Score Summary by Skill and Test
-            </div>
-
-            <div id="reportContainer" class="table-wrap"></div>
         </div>
 
     </div>
@@ -156,7 +171,7 @@ const username =
 document.getElementById("username").innerText =
     username;
 
-if (username === "npbbright") {
+if (username === "admin") {
     document
         .querySelectorAll(".admin-link")
         .forEach(link => {
@@ -387,6 +402,8 @@ function setSummary(rows) {
 async function loadReport() {
     const params =
         buildReportParams();
+    const results =
+        document.getElementById("reportResults");
 
     const response = await fetch(
         `/api/score-report?${params.toString()}`
@@ -394,6 +411,9 @@ async function loadReport() {
     const rows = await response.json();
     const container =
         document.getElementById("reportContainer");
+
+    results.style.display =
+        "block";
 
     if (!Array.isArray(rows) || rows.length === 0) {
         setSummary([]);
@@ -437,8 +457,6 @@ async function loadReport() {
         </table>
     `;
 }
-
-loadReport();
 </script>
 
 </body>

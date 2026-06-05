@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Leaderboard - SPTG</title>
+
+<link rel="stylesheet" href="/style.css">
+
+</head>
+
+<body class="app-page">
+
+<div class="header">
+    <div class="logo">
+        ✈️ SPTG Rangsit
+    </div>
+
+    <button class="menu-btn" type="button" onclick="toggleSidebar()">
+        ☰ Menu
+    </button>
+
+    <div class="user-info">
+        👤 <span id="username"></span>
+    </div>
+</div>
+
+<div class="container">
+
+    <div class="sidebar">
+
+        <h3>🧭 Navigation</h3>
+
+        <a href="/home">
+            🏠 Home
+        </a>
+
+        <a href="/upload">
+            📄 Upload Files
+        </a>
+
+        <a href="/files">
+            📥 Download Files
+        </a>
+
+        <a href="/record">
+            📝 Record
+        </a>
+
+        <a href="/record-report">
+            📊 Score Report
+        </a>
+
+        <a href="/leaderboard">
+            🏆 Leaderboard
+        </a>
+
+        <a href="/admin" class="admin-link">
+            🛠 Admin
+        </a>
+
+    </div>
+
+    <div class="sidebar-overlay" onclick="closeSidebar()"></div>
+
+    <div class="content">
+
+        <div class="report-card">
+            <h2 class="page-title">
+                🏆 Leaderboard
+            </h2>
+
+            <p class="subtitle">
+                Ranking is based on average correction rate, then average accuracy if tied.
+            </p>
+
+            <div class="table-title">
+                Top 10 Ranking
+            </div>
+
+            <div id="leaderboardContainer" class="table-wrap">
+                <div class="empty">Loading leaderboard...</div>
+            </div>
+
+            <div class="table-title your-rank-title">
+                Your Ranking
+            </div>
+
+            <div id="yourRankContainer" class="table-wrap">
+                <div class="empty">Loading your ranking...</div>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+<script src="/sidebar.js"></script>
+<script>
+const currentUsername =
+    localStorage.getItem("username") || "Guest";
+
+document.getElementById("username").innerText =
+    currentUsername;
+
+function escapeHtml(value) {
+    return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+}
+
+function numberValue(value) {
+    return Number(value || 0);
+}
+
+function maskUsername(username) {
+    const name =
+        String(username || "");
+
+    if (name.length <= 2) {
+        return `${name.slice(0, 1)}*****`;
+    }
+
+    return `${name.slice(0, 1)}*****${name.slice(-1)}`;
+}
+
+function rankIcon(rank) {
+    if (rank === 1) {
+        return "🥇";
+    }
+
+    if (rank === 2) {
+        return "🥈";
+    }
+
+    if (rank === 3) {
+        return "🥉";
+    }
+
+    return `#${rank}`;
+}
+
+function renderRankTable(rows, emptyText) {
+    if (!Array.isArray(rows) || rows.length === 0) {
+        return `<div class="empty">${emptyText}</div>`;
+    }
+
+    return `
+        <table>
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>User</th>
+                    <th>Avg Correction</th>
+                    <th>Avg Accuracy</th>
+                    <th>Correct</th>
+                    <th>Attempt</th>
+                    <th>Total</th>
+                    <th>Records</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${rows.map(row => `
+                    <tr class="${row.is_current_user ? "current-rank-row" : ""}">
+                        <td class="rank-cell">${rankIcon(row.rank)}</td>
+                        <td class="score-test">${escapeHtml(maskUsername(row.username))}</td>
+                        <td class="metric-text">${numberValue(row.correction_rate_percent).toFixed(2)}%</td>
+                        <td class="metric-text">${numberValue(row.accuracy_percent).toFixed(2)}%</td>
+                        <td>${numberValue(row.correct_score)}</td>
+                        <td>${numberValue(row.attempt_score)}</td>
+                        <td>${numberValue(row.total)}</td>
+                        <td>${numberValue(row.record_count)}</td>
+                    </tr>
+                `).join("")}
+            </tbody>
+        </table>
+    `;
+}
+
+async function loadLeaderboard() {
+    const response =
+        await fetch("/api/leaderboard");
+    const data =
+        await response.json();
+    const leaderboardContainer =
+        document.getElementById("leaderboardContainer");
+    const yourRankContainer =
+        document.getElementById("yourRankContainer");
+
+    if (!response.ok) {
+        const message =
+            escapeHtml(data.message || "Unable to load leaderboard");
+
+        leaderboardContainer.innerHTML =
+            `<div class="empty">${message}</div>`;
+        yourRankContainer.innerHTML =
+            `<div class="empty">${message}</div>`;
+        return;
+    }
+
+    leaderboardContainer.innerHTML =
+        renderRankTable(data.top10, "No ranking data found");
+    yourRankContainer.innerHTML =
+        renderRankTable(
+            data.currentUser ? [data.currentUser] : [],
+            "You do not have score records yet"
+        );
+}
+
+loadLeaderboard();
+</script>
+
+</body>
+</html>

@@ -59,6 +59,10 @@
         📊 Score Report
     </a>
 
+    <a href="/leaderboard">
+        🏆 Leaderboard
+    </a>
+
     <a href="/admin" class="admin-link">
         🛠 Admin
     </a>
@@ -146,7 +150,7 @@ document.getElementById("username")
 .innerText =
 localStorage.getItem("username") || "Guest";
 
-if (localStorage.getItem("username") === "npbbright") {
+if (localStorage.getItem("username") === "admin") {
     document
         .querySelectorAll(".admin-link")
         .forEach(link => {

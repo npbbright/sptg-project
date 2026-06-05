@@ -33,7 +33,7 @@ if(avatar){
         initials;
 }
 
-if(username === "npbbright"){
+if(username === "admin"){
     document
         .querySelectorAll(".admin-link")
         .forEach(link => {
